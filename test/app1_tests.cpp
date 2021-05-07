@@ -8,6 +8,7 @@
 //                      cpr::Authentication{"user", "pass"},
 char cUrl[1024];
 std::string myindex;
+std::string elastic_hostip, elastic_port,port;
 int temp1 = 17;
 int temp2 = temp1;
 int temp3 = temp1;
@@ -40,7 +41,7 @@ std::string getDateTime() {
     str = convertToString(datetime,14);
     return str;
 }
-
+/*
 void put()
 {    
     char myjson[1024];
@@ -60,7 +61,7 @@ void put()
     }
 }
 
-int main(int argc, char** argv) 
+int main1(int argc, char** argv) 
 {
     getDateTime();
     put();
@@ -79,7 +80,29 @@ int main(int argc, char** argv)
     }
     serverThreads2();
 } 
+*/
+std::string getEnvVar( std::string const & key )
+{
+    char * val = getenv( key.c_str() );
+    return val == NULL ? std::string("") : std::string(val);
+}
+#include <syslog.h>
+#include <unistd.h>
+#include <sys/types.h>
 
+int main()
+{
+	setlogmask (LOG_UPTO (LOG_NOTICE));
+        openlog ("elastic_json_drv", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+	syslog (LOG_NOTICE, "Program started by Real User %u (Effective User %u)", getuid(), geteuid());
+	//closelog ();
+	elastic_hostip = getEnvVar("ELASTIC_HOSTIP");
+	elastic_port   = getEnvVar("ELASTIC_PORT");
+	port   = getEnvVar("PORT");
+	syslog (LOG_NOTICE, "Host elastic  %s port %s)", elastic_hostip.c_str(), elastic_port.c_str());
+    	serverThreads2();
+	return(0);
+}
 
 //**********************************************************************************************************************************************
 /*
@@ -114,6 +137,8 @@ void *connection_handler2(void *);
 int fim=0;
 CLIENT_TYPE stClients[100];
 int handlerPointer=0;
+
+
 
 int getHandlerSocket(int client )
 {
@@ -166,23 +191,28 @@ void listAllHandlerSocket()
     printf("\nTabela de sockets ******************************\n");
 }
 
-void put(std::string sindex, std::string stype, std::string sid, std::string sjson)
+std::string put(std::string sindex, std::string stype, std::string sid, std::string sjson)
 {    
     //char myjson[1024];
     //sprintf(myjson,"{\"sensor1\":\"20.%02d\",\"sensor2\":\"21.%02d\",\"sensor3\":\"22.%02d\"}",temp1,temp2,temp3);   
     //myindex =   getDateTime();
-    sprintf(cUrl,"http://192.168.15.6:9200/%s/%s/%s",sindex.c_str(),stype.c_str(),sid.c_str());
+    std::string retorno="Error";
+    sprintf(cUrl,"http://%s:%s/%s/%s/%s",elastic_hostip.c_str(),elastic_port.c_str(),sindex.c_str(),stype.c_str(),sid.c_str());
+    syslog (LOG_NOTICE, cUrl);
     cpr::Response r = cpr::Post(cpr::Url{cUrl}, cpr::Header{{"Content-Type", "application/json"}},cpr::Body{sjson},cpr::ConnectTimeout{3000}, cpr::Timeout{3000} );
     r.status_code;                  // 200
     r.header["content-type"];       // application/json; charset=utf-8
     r.text;                         // JSON text string
     
     if( r.status_code == 200 || r.status_code == 201 ){
-        printf("Success!!! [%ld]\n",r.status_code);
-        printf("r.text[%s]\n",r.text.c_str());
-    }else{
-        printf("Error [%ld]\n",r.status_code);
+        retorno = "Success-"+std::to_string(r.status_code);
+        printf("put: Retorno.....[%s]\n",retorno.c_str());
+        printf("r.code[%ld]\n",r.status_code);
+        //printf("r.text[%s]\n",r.text.c_str());
     }
+    printf("put: Retorno.....[%s]\n",retorno.c_str());
+    return (retorno);
+    
 }
 
 int serverThreads2()
@@ -191,6 +221,7 @@ int serverThreads2()
     struct sockaddr_in server , client;
      int reuse = 1;
      int client_number=0;
+     int iport = stoi(port);
     //Create socket
     socket_desc = socket(AF_INET , SOCK_STREAM , 0);
     if (socket_desc == -1)
@@ -202,7 +233,7 @@ int serverThreads2()
     //Prepare the sockaddr_in structure
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_port = htons( 5038 );
+    server.sin_port = htons( iport );
     if (setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int)) < 0)
         printf("setsockopt(SO_REUSEADDR) failed");
     //Bind
@@ -337,7 +368,11 @@ void *connection_handler2(void *voidclient)
                 std::getline(ss, token, delim);
                 std::string sjson = token;
                 std::cout << token << "\n";          
-                put(sindex,stype,sid,sjson);
+		std::string retorno = put(sindex,stype,sid,sjson);
+		printf("Retorno [%s]\n",retorno.c_str());
+                syslog (LOG_NOTICE, retorno.c_str());
+		std::cout << retorno << "\n";
+                write(sock , retorno.c_str() , retorno.length());   
                 }
                 break;
             case CT_TIME:

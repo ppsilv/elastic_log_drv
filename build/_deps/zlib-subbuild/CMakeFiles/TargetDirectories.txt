@@ -1,0 +1,3 @@
+/home/pdsilva/elastic/elastic_log_drv/build/_deps/zlib-subbuild/CMakeFiles/edit_cache.dir
+/home/pdsilva/elastic/elastic_log_drv/build/_deps/zlib-subbuild/CMakeFiles/rebuild_cache.dir
+/home/pdsilva/elastic/elastic_log_drv/build/_deps/zlib-subbuild/CMakeFiles/zlib-populate.dir

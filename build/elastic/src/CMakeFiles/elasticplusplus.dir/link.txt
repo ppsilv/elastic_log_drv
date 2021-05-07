@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../../lib/libelasticplusplus.a  CMakeFiles/elasticplusplus.dir/query.cpp.o CMakeFiles/elasticplusplus.dir/search.cpp.o CMakeFiles/elasticplusplus.dir/sort.cpp.o CMakeFiles/elasticplusplus.dir/client.cpp.o CMakeFiles/elasticplusplus.dir/results.cpp.o CMakeFiles/elasticplusplus.dir/__/__/vendor/jsoncpp/jsoncpp.cpp.o
+/usr/bin/ranlib ../../lib/libelasticplusplus.a
